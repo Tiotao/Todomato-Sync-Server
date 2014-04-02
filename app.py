@@ -32,14 +32,15 @@ def init(local_auth):
     username = local_auth['username']
     password = local_auth['password']
     client = gdata.calendar.client.CalendarClient(source='Todomato')
-    print client
+
     client.ClientLogin(username, password, client.source)
     feed = client.GetAllCalendarsFeed()
-    print feed
+
     cid = None
 
     # create or get todomato calendar list
     for i, cal in zip(xrange(len(feed.entry)), feed.entry):
+        print cal.title.text
         if cal.title.text == "Todomato":
             cal_url = cal.id.text
     if cal_url == None:
