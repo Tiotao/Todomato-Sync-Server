@@ -179,6 +179,7 @@ def update_task():
     local_tasklist = local_data['data']['tasklist']
     local_auth = local_data['auth']
     last_sync = local_data['auth']['last_sync']
+    print last_sync
     # create or get todomato
     remote_tasklist, client, feed_uri = init(local_auth)
     print remote_tasklist, client, feed_uri
