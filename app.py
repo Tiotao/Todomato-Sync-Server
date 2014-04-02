@@ -124,7 +124,8 @@ def get_event_by_eid(tasklist, eid):
 def event_to_json(event):
     print event
     xmlstring = event.ToString()
-    print xmlstring
+    print "xmlstrijng: " + xmlstring
+    print event.ToString()
     root = ElementTree.fromstring(xmlstring)
     print "root: " + root
     edit_time = normalize_time(root[3].text)
