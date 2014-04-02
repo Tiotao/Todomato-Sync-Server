@@ -49,18 +49,11 @@ def init(local_auth):
     feed_uri = "http://www.google.com/calendar/feeds/%s/private/full" %(cid,)
     
     # get calendar events
-    print client, feed_uri
     remote_tasklist = get_remote_tasks(client, feed_uri)
-    print remote_tasklist
 
     return remote_tasklist, client, feed_uri
 
 def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
-    print client
-    print feed_uri
-    print local_tasklist
-    print remote_tasklist
-    print last_sync
 
     if len(local_tasklist) == 0:
         local_tasklist = remote_tasklist
@@ -122,9 +115,7 @@ def event_to_json(event):
     xmlstring = event.ToString()
     xml_dict = xmltodict.parse(xmlstring, process_namespaces=True)
     edit_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:updated'])
-    print "edit_time: "
     created_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:published'])
-    print "created_time: "
 
     event_dict = {
             'eid':event.id.text,
@@ -140,16 +131,11 @@ def event_to_json(event):
     return event_dict
 
 def get_remote_tasks(client, feed_uri):
-    print feed_uri, client
     feed = client.GetCalendarEventFeed(uri=feed_uri)
-    print feed
     remote_tasklist = []
     for i, event in zip(xrange(len(feed.entry)), feed.entry):
-        print event.title.text
         event_dict = event_to_json(event)
-        print event_dict
         remote_tasklist.append(event_dict)
-    print remote_tasklist
     return remote_tasklist
 
 def create_remote_tasks(client, feed_uri, local_tasklist):
@@ -193,7 +179,6 @@ def update_task():
     remote_tasklist, client, feed_uri = init(local_auth)
     # update task
     tasklist = update(client, feed_uri, local_tasklist, remote_tasklist, last_sync)
-    print tasklist
     # return task
     return jsonify({ 'tasklist': tasklist }), 201
 
