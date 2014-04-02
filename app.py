@@ -142,11 +142,14 @@ def event_to_json(event):
     return event_dict
 
 def get_remote_tasks(client, feed_uri):
+    print feed
     feed = client.GetCalendarEventFeed(uri=feed_uri)
     remote_tasklist = []
     for i, event in zip(xrange(len(feed.entry)), feed.entry):
+        print event.title.text
         event_dict = event_to_json(event)
         remote_tasklist.append(event_dict)
+    print remote_tasklist
     return remote_tasklist
 
 def create_remote_tasks(client, feed_uri, local_tasklist):
