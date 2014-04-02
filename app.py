@@ -70,6 +70,7 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
             if 'eid' not in task:
                 updated_task = create_remote_task(client, feed_uri, task)
                 local_tasklist[i] = updated_task
+                print "local create"
             else:
                 eid = task['eid']
                 event = get_event_by_eid(remote_tasklist, eid)
@@ -77,14 +78,18 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
         # remote delete
                 if event is None and local_updated_time < last_sync_time:
                     local_tasklist[i] = None
+                    print "remote delete"
                 elif event is not None:
                     remote_updated_time = string_to_time(event['edit'])
         # local or remote update
                     if local_updated_time > last_sync_time and remote_updated_time > last_sync_time:
                         if local_updated_time > remote_updated_time:
                             local_tasklist[i] = update_remote_task(client, feed_uri, eid, task)
+                            print "local update"
                         elif local_updated_time < remote_updated_time:
                             local_tasklist[i] = event
+                            print "remote update"
+
         
         for event in remote_tasklist:
             eid = event['eid']
@@ -94,12 +99,14 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
         # remote create
                 if remote_updated_time > last_sync_time:
                     local_tasklist.append(event)
+                    print "remote create"
         # local detele      
                 else:
                     event_uri = feed_uri + '/' + eid[-26:]
                     event = client.get_calendar_entry(event_uri, desired_class=gdata.calendar.data.CalendarEventEntry)
                     print event.GetEditLink()
                     client.Delete(event)
+                    print "local delete"
 
         local_tasklist = [t for t in local_tasklist if t is not None]
 
