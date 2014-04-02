@@ -119,12 +119,8 @@ def get_event_by_eid(tasklist, eid):
     return None
 
 def event_to_json(event):
-    print event
     xmlstring = event.ToString()
     xml_dict = xmltodict.parse(xmlstring, process_namespaces=True)
-    print 
-    root = ElementTree.fromstring(xmlstring)
-    print "root: " + root
     edit_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:updated'])
     print "edit_time: "
     created_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:published'])
