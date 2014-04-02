@@ -122,10 +122,15 @@ def get_event_by_eid(tasklist, eid):
     return None
 
 def event_to_json(event):
+    print event
     xmlstring = event.ToString()
+    print xmlstring
     root = ElementTree.fromstring(xmlstring)
+    print "root: " + root
     edit_time = normalize_time(root[3].text)
+    print "edit_time: "
     created_time = normalize_time(root[4].text)
+    print "created_time: "
 
     event_dict = {
             'eid':event.id.text,
@@ -148,6 +153,7 @@ def get_remote_tasks(client, feed_uri):
     for i, event in zip(xrange(len(feed.entry)), feed.entry):
         print event.title.text
         event_dict = event_to_json(event)
+        print event_dict
         remote_tasklist.append(event_dict)
     print remote_tasklist
     return remote_tasklist
