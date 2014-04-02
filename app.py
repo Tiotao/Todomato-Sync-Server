@@ -50,9 +50,9 @@ def init(local_auth):
 
     cid = cal_url.split("http://www.google.com/calendar/feeds/default/calendars/")[1]
     feed_uri = "http://www.google.com/calendar/feeds/%s/private/full" %(cid,)
-    print cid
-    # get calendar events
     
+    # get calendar events
+    print client, feed_uri
     remote_tasklist = get_remote_tasks(client, feed_uri)
     print remote_tasklist
 
@@ -141,8 +141,9 @@ def event_to_json(event):
     return event_dict
 
 def get_remote_tasks(client, feed_uri):
-    print feed
+    print feed_uri, client
     feed = client.GetCalendarEventFeed(uri=feed_uri)
+    print feed
     remote_tasklist = []
     for i, event in zip(xrange(len(feed.entry)), feed.entry):
         print event.title.text
