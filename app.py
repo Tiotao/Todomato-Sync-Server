@@ -40,7 +40,7 @@ def init(local_auth):
 
     # create or get todomato calendar list
     for i, cal in zip(xrange(len(feed.entry)), feed.entry):
-        print cal.title.text
+
         if cal.title.text == "Todomato":
             cal_url = cal.id.text
     if cal_url == None:
@@ -55,10 +55,16 @@ def init(local_auth):
     # get calendar events
     
     remote_tasklist = get_remote_tasks(client, feed_uri)
+    print remote_tasklist
 
     return remote_tasklist, client, feed_uri
 
 def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
+    print client
+    print feed_uri
+    print local_tasklist
+    print remote_tasklist
+    print last_sync
 
     if len(local_tasklist) == 0:
         local_tasklist = remote_tasklist
