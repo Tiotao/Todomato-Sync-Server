@@ -181,8 +181,10 @@ def update_task():
     last_sync = local_data['auth']['last_sync']
     # create or get todomato
     remote_tasklist, client, feed_uri = init(local_auth)
+    print remote_tasklist, client, feed_uri
     # update task
     tasklist = update(client, feed_uri, local_tasklist, remote_tasklist, last_sync)
+    print tasklist
     # return task
     return jsonify({ 'tasklist': tasklist }), 201
 
