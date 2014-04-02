@@ -32,8 +32,10 @@ def init(local_auth):
     username = local_auth['username']
     password = local_auth['password']
     client = gdata.calendar.client.CalendarClient(source='Todomato')
+    print client
     client.ClientLogin(username, password, client.source)
     feed = client.GetAllCalendarsFeed()
+    print feed
     cid = None
 
     # create or get todomato calendar list
@@ -173,16 +175,12 @@ def update_remote_task(client, feed_uri, eid, task):
 
 @app.route('/todomato/api/v1.0/update', methods = ['POST'])
 def update_task():
-    print request.get_data()
     local_data = ast.literal_eval(request.get_data())
-    print type(local_data) is dict
     local_tasklist = local_data['data']['tasklist']
     local_auth = local_data['auth']
     last_sync = local_data['auth']['last_sync']
-    print last_sync
     # create or get todomato
     remote_tasklist, client, feed_uri = init(local_auth)
-    print remote_tasklist, client, feed_uri
     # update task
     tasklist = update(client, feed_uri, local_tasklist, remote_tasklist, last_sync)
     print tasklist
