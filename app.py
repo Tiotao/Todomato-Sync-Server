@@ -40,7 +40,6 @@ def init(local_auth):
 
     # create or get todomato calendar list
     for i, cal in zip(xrange(len(feed.entry)), feed.entry):
-
         if cal.title.text == "Todomato":
             cal_url = cal.id.text
     if cal_url == None:
@@ -51,7 +50,7 @@ def init(local_auth):
 
     cid = cal_url.split("http://www.google.com/calendar/feeds/default/calendars/")[1]
     feed_uri = "http://www.google.com/calendar/feeds/%s/private/full" %(cid,)
-    
+    print cid
     # get calendar events
     
     remote_tasklist = get_remote_tasks(client, feed_uri)
