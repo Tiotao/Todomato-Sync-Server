@@ -122,7 +122,8 @@ def event_to_json(event):
     print event
     xmlstring = event.ToString()
     xml_dict = xmltodict.parse(xmlstring, process_namespaces=True)
-    print dict(xml_dict)
+    print dict(xml_dict)['http://www.w3.org/2005/Atom:entry']
+    print xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:updated']
     root = ElementTree.fromstring(xmlstring)
     print "root: " + root
     edit_time = normalize_time(root[3].text)
