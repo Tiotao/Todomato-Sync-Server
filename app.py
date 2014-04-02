@@ -10,10 +10,7 @@ import datetime
 import time
 import atom
 import ast
-try:
-  from xml.etree import ElementTree
-except ImportError:
-  from elementtree import ElementTree
+import xmltodict
 
 app = Flask(__name__)
 
@@ -124,8 +121,8 @@ def get_event_by_eid(tasklist, eid):
 def event_to_json(event):
     print event
     xmlstring = event.ToString()
-    print "xmlstrijng: " + xmlstring
-    print event.ToString()
+    print xmltodict.parse(xmlstring, process_namespaces=True)
+    print "xmlstring: " + xmlstring
     root = ElementTree.fromstring(xmlstring)
     print "root: " + root
     edit_time = normalize_time(root[3].text)

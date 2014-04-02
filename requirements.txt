@@ -5,3 +5,4 @@ Werkzeug==0.9.4
 gdata==2.0.18
 gunicorn==18.0
 itsdangerous==0.23
+xmltodict
