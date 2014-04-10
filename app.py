@@ -22,6 +22,8 @@ def normalize_time(datetime_string):
     return datetime_string
 
 def string_to_time(datetime_string):
+    if datetime_string is '':
+        return None
     return datetime.datetime.strptime(datetime_string, "%Y-%m-%dT%H:%M:%S.000+08:00")
 
 
@@ -70,17 +72,19 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
         local_tasklist = remote_tasklist
         return local_tasklist
     else:
-        last_sync_time = string_to_time(last_sync)
+        
         for i in range(0, len(local_tasklist)):
             task = local_tasklist[i]
-
+            last_sync_time = string_to_time(last_sync)
 
         # local create
-            if 'eid' not in task:
+            if 'eid' not in task or last_sync_time is None:
                 updated_task = create_remote_task(client, feed_uri, task)
                 local_tasklist[i] = updated_task
                 print "local create"
             else:
+                
+                print last_sync_time
                 eid = task['eid']
                 event = get_event_by_eid(remote_tasklist, eid)
                 print event
@@ -109,9 +113,9 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
             if local_task is None:
                 print event['description']
                 print remote_updated_time
-                print last_sync_time
+                last_sync_time = string_to_time(last_sync)
         # remote create
-                if remote_updated_time > last_sync_time:
+                if last_sync_time is None or remote_updated_time > last_sync_time:
                     local_tasklist.append(event)
                     print "remote create"
         # local detele      
@@ -166,7 +170,9 @@ def create_remote_tasks(client, feed_uri, local_tasklist):
     return remote_tasklist
 
 def create_remote_task(client, feed_uri, task):
+    print task['description']
     start_time = task['starttime']
+    print start_time
     end_time = task['endtime']
     event = gdata.calendar.data.CalendarEventEntry()
     event.title = atom.data.Title(task['description'])
