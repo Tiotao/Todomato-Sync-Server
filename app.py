@@ -34,13 +34,14 @@ def init(local_auth):
     feed = client.GetAllCalendarsFeed()
 
     cid = None
+    cal_url = None
 
     # create or get todomato calendar list
     for i, cal in zip(xrange(len(feed.entry)), feed.entry):
         print i, cal.title.text
         if cal.title.text == "Todomato":
             cal_url = cal.id.text
-    if cal_url == None:
+    if cal_url is None:
 
         calendar = gdata.calendar.data.CalendarEntry()
         print "get calendar"
