@@ -29,21 +29,29 @@ def init(local_auth):
     username = local_auth['username']
     password = local_auth['password']
     client = gdata.calendar.client.CalendarClient(source='Todomato')
+    print client
 
     client.ClientLogin(username, password, client.source)
     feed = client.GetAllCalendarsFeed()
+    print feed
 
     cid = None
 
     # create or get todomato calendar list
     for i, cal in zip(xrange(len(feed.entry)), feed.entry):
+        print i, cal
         if cal.title.text == "Todomato":
             cal_url = cal.id.text
     if cal_url == None:
+
         calendar = gdata.calendar.data.CalendarEntry()
+        print calendar
         calendar.title = atom.data.Title(text="Todomato")
+        print calendar.title
         calendar.timezone = gdata.calendar.data.TimeZoneProperty(value="Asia/Singapore")
+        print calendar.timezone
         cal_url = client.InsertCalendar(new_calendar=calendar).id.text
+        print cal_url
 
     cid = cal_url.split("http://www.google.com/calendar/feeds/default/calendars/")[1]
     feed_uri = "http://www.google.com/calendar/feeds/%s/private/full" %(cid,)
@@ -85,7 +93,8 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
                 elif event is not None:
                     remote_updated_time = string_to_time(event['edit'])
         # local or remote update
-                    if local_updated_time > last_sync_time and remote_updated_time > last_sync_time:
+
+                    if local_updated_time > last_sync_time or remote_updated_time > last_sync_time:
                         if local_updated_time > remote_updated_time:
                             local_tasklist[i] = update_remote_task(client, feed_uri, eid, task)
                             print "local update"
@@ -99,6 +108,9 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
             remote_updated_time = string_to_time(event['edit'])
             local_task = get_event_by_eid(local_tasklist, eid)
             if local_task is None:
+                print event['description']
+                print remote_updated_time
+                print last_sync_time
         # remote create
                 if remote_updated_time > last_sync_time:
                     local_tasklist.append(event)
@@ -117,7 +129,7 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
 
 def get_event_by_eid(tasklist, eid):
     for event in tasklist:
-        if event['eid'] == eid:
+        if event is not None and event['eid'] == eid:
             return event
     return None
 
