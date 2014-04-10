@@ -55,10 +55,10 @@ def init(local_auth):
 
 def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
 
-    if len(local_tasklist) == 0 and last_sync is None:
+    if len(local_tasklist) == 0 and last_sync is '':
         local_tasklist = remote_tasklist
         return local_tasklist
-    elif len(remote_tasklist) == 0 and last_sync is None:
+    elif len(remote_tasklist) == 0 and last_sync is '':
         remote_tasklist = create_remote_tasks(client, feed_uri, local_tasklist)
         local_tasklist = remote_tasklist
         return local_tasklist
