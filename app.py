@@ -82,6 +82,7 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync, time_of
             task = local_tasklist[i]
             last_sync_time = string_to_time(last_sync)
             last_sync_time = last_sync_time - time_offset
+            print last_sync_time
 
         # local create
             if 'eid' not in task or last_sync_time is None:
@@ -92,12 +93,14 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync, time_of
                 eid = task['eid']
                 event = get_event_by_eid(remote_tasklist, eid)
                 local_updated_time = string_to_time(task['edit']) - time_offset
+                print local_updated_time
         # remote delete
                 if event is None and local_updated_time < last_sync_time:
                     local_tasklist[i] = None
                     print "remote delete, sync at local: ", task['description'], ' deleted'
                 elif event is not None:
                     remote_updated_time = string_to_time(event['edit'])
+                    print remote_updated_time
         # local or remote update
 
                     if local_updated_time > last_sync_time or remote_updated_time > last_sync_time:
