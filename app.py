@@ -26,6 +26,14 @@ def string_to_time(datetime_string):
         return None
     return datetime.datetime.strptime(datetime_string, "%Y-%m-%dT%H:%M:%S.000+08:00")
 
+def date_only(datetime_string):
+    return '-' in datetime_string and ':' not in datetime_string
+
+def time_only(datetime_string):
+    return ':' in datetime_string and '-' not in datetime_string
+
+def date_and_time(datetime_string):
+    return 'T' in datetime_string
 
 def init(local_auth):
     username = local_auth['username']
@@ -137,21 +145,57 @@ def event_to_json(event):
     xml_dict = xmltodict.parse(xmlstring, process_namespaces=True)
     edit_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:updated'])
     created_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:published'])
-    complete = 'true'
-    print event.transparency.value
-    if event.transparency.value == 'http://schemas.google.com/g/2005#event.transparent':
+
+    print event.title.text
+    print '==================='
+
+    meta = eval(event.content.text)
+    timecode = meta['timecode']
+    id = meta['id']
+    priority = meta['priority']
+    completed = meta['completed']
+
+    start = event.when[0].start
+    end = event.when[0].end
+
+    startdate = start.split('T')[0]
+    enddate = end.split('T')[0]
+    starttime = ""
+    endtime = ""
+
+    if date_and_time(start) and date_and_time(end):
+        starttime = start.split('T')[1]
+        endtime = end.split('T')[1]
+
+    time = [startdate, starttime, enddate, endtime]
+
+    has_start_date = (timecode[0] == '1')
+    has_start_time = (timecode[1] == '1')
+    has_end_date = (timecode[2] == '1')
+    has_end_time = (timecode[3] == '1')
+
+    if not has_start_date:
+        startdate = ""
+    if not has_start_time:
         starttime = ""
+    if not has_end_date:
+        enddate = ""
+    if not has_end_time:
         endtime = ""
-    else:
-        starttime = event.when[0].start
-        print starttime
-        endtime = event.when[0].end
+
 
     event_dict = {
-            'eid':event.id.text,
+            'meta':{
+                'id':id,
+                'priority':priority,
+                'completed':completed,
+                'timecode':timecode,
+            },
+            'eid': event.id.text,
             'description':event.title.text,
-            'id':event.content.text,
+            'startdate':startdate,
             'starttime':starttime,
+            'enddate':enddate,
             'endtime':endtime,
             'location':event.where[0].value,
             'edit': edit_time,
@@ -175,44 +219,168 @@ def create_remote_tasks(client, feed_uri, local_tasklist):
     remote_tasklist = get_remote_tasks(client, feed_uri)
     return remote_tasklist
 
-def create_remote_task(client, feed_uri, task):
-    print task['description']
-    event = gdata.calendar.data.CalendarEventEntry()
-    if task['starttime'] == "" and task['endtime'] == "":
-        event.transparency = gdata.data.Transparency(value='http://schemas.google.com/g/2005#event.transparent')
-        start_time = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
-        end_time = start_time
-        print start_time
+def process_datetime_from_timecode(task):\
+
+    timecode = task['meta']['timecode']
+
+    has_start_date = (timecode[0] == '1')
+    has_start_time = (timecode[1] == '1')
+    has_end_date = (timecode[2] == '1')
+    has_end_time = (timecode[3] == '1')
+
+    starttime = task['starttime']
+    endtime = task['endtime']
+    startdate = task['startdate']
+    enddate = task['enddate']
+
+    if starttime is not "":
+        starttime_dt = datetime.datetime.strptime(starttime[:5], "%H:%M")
     else:
-        event.transparency = gdata.data.Transparency(value='http://schemas.google.com/g/2005#event.opaque')
-        start_time = task['starttime']
-        print start_time
-        end_time = task['endtime']
+        starttime_dt = None
+
+    if startdate is not "":
+        startdate_dt = datetime.datetime.strptime(startdate[:10], "%Y-%m-%d")
+    else:
+        startdate_dt = None
+
+    if endtime is not "":
+        endtime_dt = datetime.datetime.strptime(endtime[:5], "%H:%M")
+    else:
+        endtime_dt = None
+
+    if enddate is not "":
+        enddate_dt = datetime.datetime.strptime(enddate[:10], "%Y-%m-%d")
+    else:
+        enddate_dt = None
+
+
+    # process data
+
+    # 1111
+    if has_start_date and has_start_time and has_end_date and has_end_time:
+        pass
+    # 1101
+    elif has_start_date and has_start_time and has_end_date and not has_end_date:
+        if starttime_dt > endtime_dt:
+            enddate = startdate_dt.timedelta + datetime.timedelta(days=1)
+        else:
+            enddate = startdate
+
+    # 1110
+    elif has_start_date and has_start_time and has_end_date and not has_end_time:
+        endtime = starttime
+
+    # 1011
+    elif has_start_date and not has_start_time and has_end_date and has_end_time:
+        starttime = endtime
+
+    # 0111
+    elif not has_start_date and has_start_time and has_end_date and has_end_time:
+        if starttime_dt > endtime_dt:
+            startdate = enddate_dt.timedelta - datetime.timedelta(days=1)
+        else:
+            startdate = enddate
+
+    # 1100
+    elif has_start_date and has_start_time and not has_end_date and not has_end_time:
+        enddate = startdate
+        endtime = starttime
+
+    # 0101
+    elif not has_start_date and has_start_time and not has_end_date and has_end_time:
+        startdate = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
+        enddate = startdate
+
+    # 0110
+    elif not has_start_date and has_start_time and has_end_date and not has_end_time:
+        startdate = enddate
+        endtime = starttime
+
+    # 1001
+    elif has_start_date and not has_start_time and not has_end_date and has_end_time:
+        enddate = startdate
+        starttime = endtime
+
+    # 1010
+    elif has_start_date and not has_start_time and has_end_date and not has_end_time:
+        pass
+
+    # 0011
+    elif not has_start_date and not has_start_time and has_end_date and has_end_time:
+        starttime = endtime
+        startdate = enddate
+
+    # 0100
+    elif not has_start_date and has_start_time and not has_end_date and not has_end_time:
+        endtime = starttime
+        startdate = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
+        enddate = startdate
+
+    # 1000
+    elif has_start_date and not has_start_time and not has_end_date and not has_end_time:
+        enddate = startdate
+        startdate = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
+        enddate = startdate
+
+    # 0001
+    elif not has_start_date and not has_start_time and not has_end_date and has_end_time:
+        starttime = endtime
+        enddate = startdate = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
+
+    # 0010
+    elif not has_start_date and not has_start_time and has_end_date and not has_end_time:
+        enddate = startdate = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
+    # 0000
+    else:
+        enddate = startdate = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
+
+    if starttime == "" or endtime == "":
+        start = startdate
+        end = enddate
+    else:
+        start = startdate + 'T' + starttime
+        end = enddate + 'T' + endtime
+
+    return start, end
+
+
+def create_remote_task(client, feed_uri, task):
+
+    # process meta
+    meta = task['meta']
+
+    start, end = process_datetime_from_timecode(task)
+
+    event = gdata.calendar.data.CalendarEventEntry()
+
+    starttime = task['starttime']
+    endtime = task['endtime']
+
     event.title = atom.data.Title(task['description'])
-    event.content = atom.data.Content(task['id'])
+    event.content = atom.data.Content(str(task['meta']))
     event.where.append(gdata.data.Where(value=task['location']))
-    event.when.append(gdata.data.When(start=start_time, end=end_time))
-    print event
+    event.when.append(gdata.data.When(start=start, end=end))
+    print task['description']
+    print "======================"
+    print "starttime: ", start
+    print "endtime: ", end
     event = client.InsertEvent(event, feed_uri)
     return event_to_json(event)
 
 def update_remote_task(client, feed_uri, eid, task):
     event_uri = feed_uri + '/' + eid[-26:]
     event = client.get_calendar_entry(event_uri, desired_class=gdata.calendar.data.CalendarEventEntry)
+
+    meta = task['meta']
+
+    start, end = process_datetime_from_timecode(task)
     
     event.title.text = task['description']
-    event.content.text = task['id']
+    event.content.text = str(task['meta'])
     event.where[0].value = task['location']
-    event.when[0].start = task['starttime']
-    event.when[0].end = task['endtime']
-    if task['starttime'] == "" and task['endtime'] == "":
-        event.transparency.value = 'http://schemas.google.com/g/2005#event.transparent'
-        start_time = (datetime.datetime.now() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
-        end_time = start_time
-    else:
-        event.transparency.value = 'http://schemas.google.com/g/2005#event.opaque'
-        start_time = task['starttime']
-        end_time = task['endtime']
+
+    event.when[0].start = start
+    event.when[0].end = end
     event = client.Update(event)
     return event_to_json(event)
 
