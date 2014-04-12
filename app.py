@@ -42,6 +42,11 @@ def init(local_auth):
 
     client.ClientLogin(username, password, client.source)
     feed = client.GetAllCalendarsFeed()
+    current_time = string_to_time(local_auth['current_time'])
+    server_time = (datetime.datetime.now() + datetime.timedelta(hours=8))
+    time_offset = current_time - server_time
+    print "current and server", current_time, server_time
+
 
     cid = None
     cal_url = None
@@ -158,6 +163,8 @@ def event_to_json(event):
     start = event.when[0].start
     end = event.when[0].end
 
+    print start, end
+
     startdate = start.split('T')[0]
     enddate = end.split('T')[0]
     starttime = ""
@@ -168,6 +175,8 @@ def event_to_json(event):
         endtime = end.split('T')[1]
 
     time = [startdate, starttime, enddate, endtime]
+
+    print time, timecode
 
     has_start_date = (timecode[0] == '1')
     has_start_time = (timecode[1] == '1')
@@ -201,6 +210,8 @@ def event_to_json(event):
             'edit': edit_time,
             'created': created_time,
         }
+
+    print event_dict
 
     return event_dict
 
