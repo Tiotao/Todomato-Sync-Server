@@ -11,6 +11,7 @@ import time
 import atom
 import ast
 import xmltodict
+import json
 
 app = Flask(__name__)
 
@@ -42,12 +43,7 @@ def init(local_auth):
 
     client.ClientLogin(username, password, client.source)
     feed = client.GetAllCalendarsFeed()
-    current_time = string_to_time(local_auth['current_time'])
-    server_time = (datetime.datetime.now() + datetime.timedelta(hours=8))
-    time_offset = current_time - server_time
-    print "current and server", current_time, server_time
-
-
+   
     cid = None
     cal_url = None
 
@@ -55,8 +51,9 @@ def init(local_auth):
     for i, cal in zip(xrange(len(feed.entry)), feed.entry):
         if cal.title.text == "Todomato":
             cal_url = cal.id.text
+            print 'new calendar created: No'
     if cal_url is None:
-
+        print 'new calendar created: Yes'
         calendar = gdata.calendar.data.CalendarEntry()
         calendar.title = atom.data.Title(text="Todomato")
         calendar.timezone = gdata.calendar.data.TimeZoneProperty(value="Asia/Singapore")
@@ -70,7 +67,7 @@ def init(local_auth):
 
     return remote_tasklist, client, feed_uri
 
-def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
+def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync, time_offset):
 
     if len(local_tasklist) == 0 and last_sync is '':
         local_tasklist = remote_tasklist
@@ -90,28 +87,26 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
             if 'eid' not in task or last_sync_time is None:
                 updated_task = create_remote_task(client, feed_uri, task)
                 local_tasklist[i] = updated_task
-                print "local create"
+                print "local create, sync at remote: ", task['description'] , ' created'
             else:
                 eid = task['eid']
                 event = get_event_by_eid(remote_tasklist, eid)
-                print event
                 local_updated_time = string_to_time(task['edit']) - time_offset
         # remote delete
                 if event is None and local_updated_time < last_sync_time:
                     local_tasklist[i] = None
-                    print "remote delete"
+                    print "remote delete, sync at local: ", task['description'], ' deleted'
                 elif event is not None:
                     remote_updated_time = string_to_time(event['edit'])
         # local or remote update
 
                     if local_updated_time > last_sync_time or remote_updated_time > last_sync_time:
                         if local_updated_time > remote_updated_time:
-                            print task
                             local_tasklist[i] = update_remote_task(client, feed_uri, eid, task)
-                            print "local update"
+                            print "local update, sync at remote: ", task['description'], ' updated'
                         elif local_updated_time < remote_updated_time:
                             local_tasklist[i] = event
-                            print "remote update"
+                            print "remote update, sync at local: ", task['description'], ' updated'
 
         
         for event in remote_tasklist:
@@ -119,22 +114,18 @@ def update(client, feed_uri, local_tasklist, remote_tasklist, last_sync):
             remote_updated_time = string_to_time(event['edit'])
             local_task = get_event_by_eid(local_tasklist, eid)
             if local_task is None:
-                print event['description']
                 last_sync_time = string_to_time(last_sync)
         # remote create
-                print last_sync_time
-                print remote_updated_time
 
                 if last_sync_time is None or remote_updated_time > last_sync_time:
                     local_tasklist.append(event)
-                    print "remote create"
+                    print "remote create, sync at local: ", event['description'], ' created'
         # local detele      
                 else:
                     event_uri = feed_uri + '/' + eid[-26:]
                     event = client.get_calendar_entry(event_uri, desired_class=gdata.calendar.data.CalendarEventEntry)
-                    print event.GetEditLink()
                     client.Delete(event)
-                    print "local delete"
+                    print "local delete, sync at remote: ", event['description'], ' deleted'
 
         local_tasklist = [t for t in local_tasklist if t is not None]
 
@@ -152,20 +143,20 @@ def event_to_json(event):
     edit_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:updated'])
     created_time = normalize_time(xml_dict['http://www.w3.org/2005/Atom:entry']['http://www.w3.org/2005/Atom:published'])
 
-    print event.title.text
-    print '==================='
-
-    meta = eval(event.content.text)
-    timecode = meta['timecode']
-    id = meta['id']
-    priority = meta['priority']
-    completed = meta['completed']
+    if (event.content.text is None):
+        timecode = '1111'
+        id = None
+        priority = "LOW"
+        completed = "false"
+    else:
+        meta = eval(event.content.text)
+        timecode = meta['timecode']
+        id = meta['id']
+        priority = meta['priority']
+        completed = meta['completed']
 
     start = event.when[0].start
     end = event.when[0].end
-
-    print start, end
-
     startdate = start.split('T')[0]
     enddate = end.split('T')[0]
     starttime = ""
@@ -176,9 +167,6 @@ def event_to_json(event):
         endtime = end.split('T')[1]
 
     time = [startdate, starttime, enddate, endtime]
-
-    print time, timecode
-
     has_start_date = (timecode[0] == '1')
     has_start_time = (timecode[1] == '1')
     has_end_date = (timecode[2] == '1')
@@ -212,7 +200,7 @@ def event_to_json(event):
             'created': created_time,
         }
 
-    print event_dict
+    print json.dumps(event_dict, sort_keys=True, indent=4)
 
     return event_dict
 
@@ -220,7 +208,6 @@ def get_remote_tasks(client, feed_uri):
     feed = client.GetCalendarEventFeed(uri=feed_uri)
     remote_tasklist = []
     for i, event in zip(xrange(len(feed.entry)), feed.entry):
-        print event.transparency.value
         event_dict = event_to_json(event)
         remote_tasklist.append(event_dict)
     return remote_tasklist
@@ -372,10 +359,6 @@ def create_remote_task(client, feed_uri, task):
     event.content = atom.data.Content(str(task['meta']))
     event.where.append(gdata.data.Where(value=task['location']))
     event.when.append(gdata.data.When(start=start, end=end))
-    print task['description']
-    print "======================"
-    print "starttime: ", start
-    print "endtime: ", end
     event = client.InsertEvent(event, feed_uri)
     return event_to_json(event)
 
@@ -398,15 +381,30 @@ def update_remote_task(client, feed_uri, eid, task):
 
 @app.route('/todomato/api/v1.0/update', methods = ['POST'])
 def update_task():
+
     local_data = ast.literal_eval(request.get_data())
+
+    current_time = string_to_time(local_data['auth']['current_time'])
+    server_time = (datetime.datetime.now() + datetime.timedelta(hours=8))
+    server_time = server_time.replace(microsecond = 0)
+    time_offset = current_time - server_time
+    print "\nSTART SYNCING \n====================\ntime offset: ", time_offset
+    print "\nLOCAL DATA RECEIVED \n====================\nlocal data: \n", json.dumps(local_data, sort_keys=True, indent=4)
+    
     local_tasklist = local_data['data']['tasklist']
     local_auth = local_data['auth']
     last_sync = local_data['auth']['last_sync']
+
+    print '\nINITIALISATION\n====================\n'
+    
     # create or get todomato
     remote_tasklist, client, feed_uri = init(local_auth)
+
     # update task
-    tasklist = update(client, feed_uri, local_tasklist, remote_tasklist, last_sync)
+    print '\nUPDATING\n====================\n'
+    tasklist = update(client, feed_uri, local_tasklist, remote_tasklist, last_sync, time_offset)
     # return task
+    print '\nRESPONDING\n====================\n', json.dumps(tasklist, sort_keys=True, indent=4)
     return jsonify({ 'tasklist': tasklist }), 201
 
 
